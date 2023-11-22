@@ -1,4 +1,6 @@
 #include <iostream>
+#include <algorithm>
+#include <string>
 
 #include "Fraction.hpp"
 
@@ -12,6 +14,10 @@ void Fraction::checkSign() {
         nominator = abs(nominator);
         denominator = abs(denominator);
     }
+    if (denominator < 0 && nominator > 0) {
+        denominator = -denominator;
+        nominator = -nominator;
+    }
 }
 
 void Fraction::setNominator(const int& nom) {
@@ -20,7 +26,7 @@ void Fraction::setNominator(const int& nom) {
 }
 void Fraction::setDenominator(const int& den) {
     if (!den) {
-        std::cerr << "division by zero";
+        throw "division by zero when creating fraction";
         return;
     }
     denominator = den;
@@ -33,28 +39,131 @@ void Fraction::updateFraction() {
     checkSign();
 }
 
-inline int Fraction::gcf(int a, int b) {
+int Fraction::gcf(int a, int b) {
     while (a != 0 && b != 0) {
-        int& c = max(a, b);
-        c %= min(a, b);
+        if (a > b) {
+            a %= b;
+        }
+        else {
+            b %= a;
+        }
     }
-    return max(a, b);
+    return std::max(a, b);
 }
 
-inline int& Fraction::max(int& a, int& b) {
-    if (a >= b) {
-        return a;
+int Fraction::getCommonDivisor(const Fraction& af, const Fraction& bf) {
+    int a = af.getDenominator();
+    int b = bf.getDenominator();
+    if (a % b == 0) {
+        return a / b;
+    }
+    if (b % a == 0) {
+        return b / a;
     }
     else {
-        return b;
+        return a * b;
     }
 }
 
-inline int& Fraction::min(int& a, int& b) {
-    if (a <= b) {
-        return a;
+Fraction Fraction::getReversed() const {
+    if (getDenominator() == 0) {
+        throw "division by zero when reversing fraction " + std::to_string(getNominator()) + " / " + std::to_string(getDenominator());
     }
-    else {
-        return b;
+    Fraction new_fr{getDenominator(), getNominator()};
+    return new_fr;
+};
+
+
+Fraction operator -(const Fraction& a, const Fraction& b) {
+    int common_div = Fraction::getCommonDivisor(a, b);
+    return Fraction{ (a.getNominator() * (common_div / a.getDenominator())) -
+                     (b.getNominator() * (common_div / b.getDenominator())),
+                     common_div };
+}
+
+Fraction operator +(const Fraction& a, const Fraction& b) {
+    int common_div = Fraction::getCommonDivisor(a, b);
+    return Fraction{ (a.getNominator() * (common_div / a.getDenominator())) +
+                     (b.getNominator() * (common_div / b.getDenominator())),
+                     common_div };
+}
+
+Fraction operator *(const Fraction& a, const Fraction& b) {
+    return Fraction{ a.getNominator() * b.getNominator(),
+                     a.getDenominator() * b.getDenominator() };
+}
+
+Fraction operator /(const Fraction &a, const Fraction &b) {
+    Fraction new_b = b.getReversed();
+    return a * new_b;
+};
+
+Fraction operator -(const Fraction& a) {
+    Fraction new_fr{ -a.nominator, a.denominator };
+    return new_fr;
+}
+
+Fraction operator ++(Fraction& a) {
+    Fraction new_fr{ 1 };
+    a = a + new_fr;
+    return a;
+}
+
+Fraction operator ++(Fraction& a, int d) {
+    Fraction old_fr = a;
+    Fraction new_fr{ 1 };
+    a = a + new_fr;
+    return old_fr;
+}
+
+Fraction operator --(Fraction& a) {
+    Fraction new_fr{ 1 };
+    a = a - new_fr;
+    return a;
+}
+
+Fraction operator --(Fraction& a, int d) {
+    Fraction old_fr = a;
+    Fraction new_fr{ 1 };
+    a = a - new_fr;
+    return old_fr;
+}
+
+std::ostream& operator <<(std::ostream& out, const Fraction& obj) {
+    if (obj.getNominator() == 0) {
+        out << 0;
+        return out;
     }
+    out << obj.getNominator() << " / " << obj.getDenominator();
+    return out;
+}
+
+std::istream& operator >>(std::istream& in, Fraction& obj) {
+    std::string tmp{};
+    std::getline(in, tmp, '/');
+    obj.setNominator(stoi(tmp));
+    in >> tmp;
+    obj.setDenominator(stoi(tmp));
+    return in;
+}
+
+bool Fraction::isProper() const {
+    return getNominator() < getDenominator();
+}
+
+bool Fraction::isImproper() const {
+    return !isProper();
+}
+
+bool Fraction::isInt() const {
+    return getNominator() % getDenominator() == 0;
+}
+
+int Fraction::getWholePart() const {
+    return getNominator() / getDenominator();
+}
+
+Fraction Fraction::getFractionalPart() const {
+    Fraction new_fr{ getWholePart(), 1 };
+    return *this - new_fr;
 }
